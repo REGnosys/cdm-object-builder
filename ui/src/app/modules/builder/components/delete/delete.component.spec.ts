@@ -5,7 +5,7 @@ import { mockJsonAttributeNode } from '../../mocks/model-mocks';
 import { BuilderComponent } from '../builder/builder.component';
 
 import { DeleteComponent } from './delete.component';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatLegacyDialogModule as MatDialogModule } from '@angular/material/legacy-dialog';
 
 describe('DeleteComponent', () => {
   let component: DeleteComponent;

@@ -3,8 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { mockJsonAttributeNode } from '../../mocks/model-mocks';
 import { JSON_ATTRIBUTE_NODE_TOKEN } from '../../tokens';
 
-import { MatMenuModule } from '@angular/material/menu';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatLegacyMenuModule as MatMenuModule } from '@angular/material/legacy-menu';
+import { MatLegacySnackBarModule as MatSnackBarModule } from '@angular/material/legacy-snack-bar';
 import { StructuredTypeNodeComponent } from './structured-type-node.component';
 
 describe('StructuredTypeNodeComponent', () => {
