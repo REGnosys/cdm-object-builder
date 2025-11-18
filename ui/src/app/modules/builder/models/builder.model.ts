@@ -69,3 +69,9 @@ export type JsonValue =
   | string[]
   | number[]
   | boolean[];
+
+// Composite input used by Tabular view to access both the exported JSON and the JsonRootNode
+export interface TabularViewerInput {
+  cdmJson: any;
+  rootNode: JsonRootNode;
+}

@@ -4,6 +4,12 @@ import {
   Input,
   OnInit,
 } from '@angular/core';
+import {
+  JsonAttributeNode,
+  JsonNode,
+  JsonRootNode,
+  TabularViewerInput,
+} from '../../models/builder.model';
 
 interface GridDataItem {
   style: object;
@@ -35,12 +41,21 @@ const EXCLUDED_NODES = [
 })
 export class TabularViewComponent implements OnInit {
   private _jsonStructure: any;
+  private _rootNode?: JsonRootNode;
   private transposed = false;
 
   @Input()
-  set cdmJson(jsonStructure: any) {
+  set tabularInput(value: TabularViewerInput | undefined) {
+    if (!value) {
+      return;
+    }
+    const jsonStructure = value.cdmJson;
+    this._rootNode = value.rootNode;
     if (jsonStructure !== undefined && jsonStructure !== null) {
-      this.gridData = this.convertJsonStructureToGrid(jsonStructure);
+      this.gridData = this.convertJsonStructureToGrid(
+        jsonStructure,
+        this._rootNode!
+      );
     }
     this._jsonStructure = jsonStructure;
   }
@@ -51,12 +66,23 @@ export class TabularViewComponent implements OnInit {
 
   public toggleTranspose() {
     this.transposed = !this.transposed;
-    this.gridData = this.convertJsonStructureToGrid(this._jsonStructure);
+    this.gridData = this.convertJsonStructureToGrid(
+      this._jsonStructure,
+      this._rootNode!
+    );
   }
 
-  private convertJsonStructureToGrid(jsonStructure: {}): GridData {
+  private convertJsonStructureToGrid(
+    jsonStructure: {},
+    rootNode: JsonRootNode
+  ): GridData {
     const gridDepth = this.getGridDepth(1, jsonStructure);
-    const items = this.createGridItemsForAny(gridDepth, 1, jsonStructure);
+    const items = this.createGridItemsForAny(
+      gridDepth,
+      1,
+      jsonStructure,
+      rootNode
+    );
 
     return {
       items: items,
@@ -81,13 +107,15 @@ export class TabularViewComponent implements OnInit {
   private createGridItemsForAny(
     maxColumn: number,
     currentDepth: number,
-    jsonStructure: any
+    jsonStructure: any,
+    jsonNode: JsonNode
   ): GridDataItem[] {
     if (!(jsonStructure instanceof Object)) {
       return [this.createLeafNode(jsonStructure, currentDepth, maxColumn)];
     }
 
     const gridDataItems: GridDataItem[] = [];
+    const jsonAttributeNodes = jsonNode.children || [];
 
     for (const childJsonKey of Object.keys(jsonStructure)) {
       if (EXCLUDED_NODES.includes(childJsonKey)) {
@@ -95,6 +123,14 @@ export class TabularViewComponent implements OnInit {
       }
 
       let childJsonStructure = jsonStructure[childJsonKey];
+      let jsonAttributeNode = jsonAttributeNodes?.find(
+        node => node.definition.name === childJsonKey
+      );
+
+      if (!jsonAttributeNode) {
+        jsonAttributeNode = jsonAttributeNodes[0];
+        // throw new Error(`No attribute node found for key: ${childJsonKey}`);
+      }
 
       if (Array.isArray(childJsonStructure)) {
         for (let i = 0; i < childJsonStructure.length; i++) {
@@ -105,7 +141,8 @@ export class TabularViewComponent implements OnInit {
               childJsonStructure.length == 1
                 ? childJsonKey
                 : childJsonKey + ' ' + (i + 1),
-              childJsonStructure[i]
+              childJsonStructure[i],
+              jsonAttributeNode
             )
           );
         }
@@ -115,7 +152,8 @@ export class TabularViewComponent implements OnInit {
             maxColumn,
             currentDepth,
             childJsonKey,
-            childJsonStructure
+            childJsonStructure,
+            jsonAttributeNode
           )
         );
       }
@@ -142,17 +180,19 @@ export class TabularViewComponent implements OnInit {
     maxColumn: number,
     currentDepth: number,
     jsonKey: string,
-    jsonStructure: any
+    jsonStructure: any,
+    jsonAttributeNode: JsonAttributeNode
   ) {
     let childGridItems = this.createChildGridItems(
       maxColumn,
       currentDepth,
-      jsonStructure
+      jsonStructure,
+      jsonAttributeNode
     );
 
     const xSpan =
       1 + this.directChildColumnDepthDiff(childGridItems, currentDepth);
-    const ySpan = childGridItems.filter((c) => c.leaf).length;
+    const ySpan = childGridItems.filter(c => c.leaf).length;
     let columnIndex = currentDepth;
 
     let gridDataItems = [
@@ -197,11 +237,11 @@ export class TabularViewComponent implements OnInit {
     currentDepth: number
   ) {
     const directChildGridItems = childGridItems.filter(
-      (c) => c.depth === currentDepth + 1
+      c => c.depth === currentDepth + 1
     );
 
     const directChildColumnDepthDiffs = directChildGridItems.map(
-      (c) => c.columnIndex - c.depth
+      c => c.columnIndex - c.depth
     );
     const directChildColumnDepthDiff = Math.max(...directChildColumnDepthDiffs);
     return directChildColumnDepthDiff;
@@ -210,7 +250,8 @@ export class TabularViewComponent implements OnInit {
   private createChildGridItems(
     maxColumn: number,
     currentDepth: number,
-    childJsonStructure: any
+    childJsonStructure: any,
+    jsonAttributeNode: JsonAttributeNode
   ) {
     let childGridItems: GridDataItem[];
 
@@ -218,13 +259,15 @@ export class TabularViewComponent implements OnInit {
       childGridItems = this.getGridItemsForObject(
         maxColumn,
         currentDepth + 1,
-        childJsonStructure
+        childJsonStructure,
+        jsonAttributeNode
       );
     } else {
       childGridItems = this.createGridItemsForAny(
         maxColumn,
         currentDepth + 1,
-        childJsonStructure
+        childJsonStructure,
+        jsonAttributeNode
       );
     }
     return childGridItems;
@@ -233,19 +276,30 @@ export class TabularViewComponent implements OnInit {
   private getGridItemsForObject(
     maxColumn: number,
     currentDepth: number,
-    childValue: object
+    childValue: object,
+    jsonAttributeNode: JsonAttributeNode
   ) {
     const childGridItems: GridDataItem[] = [];
     Object.entries(childValue).forEach(([nestedKey, nestedValue]) => {
       if (SKIPPED_NODES.includes(nestedKey)) {
         childGridItems.push(
-          ...this.createGridItemsForAny(maxColumn, currentDepth, nestedValue)
+          ...this.createGridItemsForAny(
+            maxColumn,
+            currentDepth,
+            nestedValue,
+            jsonAttributeNode
+          )
         );
       } else {
         childGridItems.push(
-          ...this.createGridItemsForAny(maxColumn, currentDepth, {
-            [nestedKey]: nestedValue,
-          })
+          ...this.createGridItemsForAny(
+            maxColumn,
+            currentDepth,
+            {
+              [nestedKey]: nestedValue,
+            },
+            jsonAttributeNode
+          )
         );
       }
     });

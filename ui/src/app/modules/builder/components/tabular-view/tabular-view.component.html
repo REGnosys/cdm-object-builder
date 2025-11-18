@@ -3,7 +3,8 @@
     >Transpose</mat-slide-toggle
   >
 </div>
-<div class="grid" [ngStyle]="gridData.style">
+<!-- Guard rendering until gridData is available to avoid undefined.style errors -->
+<div class="grid" *ngIf="gridData" [ngStyle]="gridData.style">
   <div
     *ngFor="let item of gridData.items"
     [ngStyle]="item.style"

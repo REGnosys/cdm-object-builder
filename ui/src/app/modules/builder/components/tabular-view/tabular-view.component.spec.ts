@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TabularViewComponent } from './tabular-view.component';
+import { TabularViewerInput } from '../../models/builder.model';
 
 describe('TabularViewComponent', () => {
   let component: TabularViewComponent;
@@ -15,7 +16,13 @@ describe('TabularViewComponent', () => {
 
     fixture = TestBed.createComponent(TabularViewComponent);
     component = fixture.componentInstance;
-    component.cdmJson = sampleJson;
+    const input: TabularViewerInput = {
+      cdmJson: sampleJson,
+      // The TabularViewComponent currently only uses cdmJson to build its grid;
+      // rootNode is passed through for future use, so a minimal stub is sufficient here.
+      rootNode: {} as any,
+    };
+    component.tabularInput = input;
     fixture.detectChanges();
   });
 
