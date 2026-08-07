@@ -86,11 +86,18 @@
                 <artifactId>logback-core</artifactId>
                 <version>${logback.version}</version>
             </dependency>
-            <!-- Transitive via rune-common; pinned to fix CVE-2026-54512 / CVE-2026-54513 -->
+            <!-- Transitive via rune-common; pinned to fix CVE-2026-54512 / CVE-2026-54513.
+                 Imported as the BOM rather than pinning jackson-databind alone: databind 2.22
+                 references annotations introduced in jackson-annotations 2.22 (e.g.
+                 JsonSerializeAs), so pinning databind on its own leaves the rest of the Jackson
+                 modules at the version inherited from cdm-java (2.17.1) and the generator dies
+                 with NoClassDefFoundError at runtime. -->
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
                 <version>${jackson-databind.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <!-- Transitive via rune-maven-plugin -> maven-plugin-api; pinned past
                  3.6.0 to fix CVE-2025-67030 (directory traversal in Expand.extractFile) -->
